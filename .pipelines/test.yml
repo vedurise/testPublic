@@ -1,3 +1,5 @@
+pool:
+  vmImage: 'vs2017-win2016'
 resources:
   repositories: 
     - repository: TestPrivate # The name used to reference this repository in the checkout step
