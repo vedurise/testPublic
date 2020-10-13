@@ -1,0 +1,11 @@
+resources:
+  repositories: 
+    - repository: TestPrivate # The name used to reference this repository in the checkout step
+      type: github
+      endpoint: vedurise
+      name: vedurise/TestPrivate
+
+steps:
+- checkout: self
+- checkout: TestPrivate
+- script: dir /s $(Build.SourcesDirectory)
