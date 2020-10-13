@@ -1,0 +1,87 @@
+trigger: none
+
+parameters:
+- name: 'infra_version'
+  displayName: 'CDPX-Infra-AzureAutomation Version'
+  type: string
+  default: "*"
+
+- name: 'scripts_version'
+  displayName: 'Scripts Version'
+  type: string
+  default: "*"
+
+- name: 'rest_lib_version'
+  displayName: 'VSTS-REST-lib Version'
+  type: string
+  default: "*"
+
+variables:
+  - name: CDP_DEFINITION_BUILD_COUNT
+    value: $[counter('', 0)]
+  - name: WindowsContainerImage
+    value: 'cdpxwin1809.azurecr.io/global/vse2019:latest'
+
+resources:
+  repositories: 
+    - repository: templates
+      type: git
+      name: OneBranch.Pipelines/GovernedTemplates
+      ref: refs/heads/main
+    - repository: TestPrivate # The name used to reference this repository in the checkout step
+      type: github
+      endpoint: vedurise
+      name: vedurise/TestPrivate
+      
+extends:
+  template: v2/OneBranch.NonOfficial.CrossPlat.yml@templates
+  parameters:
+    globalSDL:
+      baseline:
+        baselineFile: $(Build.SourcesDirectory)\.gdn\.gdnbaselines
+        baselineSet: default
+
+    stages:
+    - stage: build
+      jobs:
+      - job: cdpx_global
+        pool:
+          type: windows
+        variables:
+          ob_outputDirectory: '$(Build.SourcesDirectory)\output'
+        
+        steps:
+          - checkout: TestPrivate        
+          - task: CmdLine@2
+            displayName: 'Check out other repo'
+            inputs:
+              script: dir $(Build.SourcesDirectory)
+          - task: onebranch.pipeline.version@1
+            inputs:
+              system: 'RevisionCounter'
+              major: '1'
+              minor: '4'
+              tag: pre
+
+          - task: CmdLine@2
+            displayName: 'Restore'
+            inputs:
+              script: '$(Build.SourcesDirectory)\.pipelines\restore.cmd'
+              workingDirectory: '$(Build.SourcesDirectory)'
+          - task: CmdLine@2
+            displayName: 'Build'
+            inputs:
+              script: '$(Build.SourcesDirectory)\.pipelines\build.cmd'
+              workingDirectory: '$(Build.SourcesDirectory)'
+
+          - task: CmdLine@2
+            displayName: 'Test'
+            inputs:
+              script: '$(Build.SourcesDirectory)\.pipelines\test.cmd'
+              workingDirectory: '$(Build.SourcesDirectory)'
+
+          - task: CmdLine@2
+            displayName: 'Package'
+            inputs:
+              script: '$(Build.SourcesDirectory)\.pipelines\package.cmd'
+              workingDirectory: '$(Build.SourcesDirectory)'
